@@ -45,6 +45,4 @@ node app.js
 
 * **Aisha Ahmad** - [Aisha Ahmad](https://github.com/aishaprograms)
 
-## Inspired By
-Freecodecamp challenge
 #100DaysofCode
