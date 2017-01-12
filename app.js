@@ -29,7 +29,7 @@ function bid() {
             if (answers.choice === 'Post an item') {
                 postItem();
             } else {
-                console.log('You chose to bid');
+                bidItem();
             }
         });
 }
@@ -43,12 +43,13 @@ function postItem() {
             if (value !== '' && value !== null && value !== undefined) {
                 return true;
             }
-            return 'Please enter a valid input';
+            console.log('Please enter a valid input');
+            return false;
         }
     }, {
         name: 'price',
         type: 'input',
-        message: 'What is the price of the item?',
+        message: 'What is the starting bid of the item?',
         validate: function(value) {
             if (!isNaN(value)) {
                 return true;
@@ -56,8 +57,58 @@ function postItem() {
             return 'Please enter a number';
         }
     }];
-    inquirer.prompt(info).then(function(answers) {
-        console.log(answers.name);
-        console.log(answers.price);
+    inquirer.prompt(info).then(function(answer) {
+        connection.query("INSERT INTO items SET ?", {
+            name: answer.name,
+            price: answer.price,
+            highestBid: answer.price
+        }, function(err, res) {
+            console.log("Your auction was created successfully!");
+            bid();
+        });
     });
 }
+
+function bidItem() {
+    connection.query("SELECT * FROM items", function(err, res) {
+        //show all items
+        console.log(res);
+        inquirer.prompt({
+            name: "selection",
+            type: "list",
+            choices: function(value) {
+                var choiceArray = [];
+                for (var i = 0; i < res.length; i++) {
+                    choiceArray.push(res[i].name);
+                }
+                return choiceArray;
+            },
+            message: "Which item do you want to bid on?"
+        }).then(function(answer) {
+            for (var i = 0; i < res.length; i++) {
+                if (res[i].name === answer.selection) {
+                    var chosenItem = res[i];
+                    inquirer.prompt({
+                        name: "bidAmount",
+                        type: "input",
+                        message: "How much would you like to bid?"
+                    }).then(function(answer) {
+                        if (chosenItem.highestBid <= parseFloat(answer.bidAmount)) {
+                            connection.query("UPDATE items SET ? WHERE ?", [{
+                                highestBid: answer.bidAmount
+                            }, {
+                                id: chosenItem.id
+                            }], function(err, res) {
+                                console.log("You won the highest bid!");
+                                bid();
+                            });
+                        } else {
+                            console.log("Too bad-- you bid too low");
+                            bid();
+                        }
+                    });
+                }
+            }
+        });
+    });
+};
